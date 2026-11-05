@@ -39,7 +39,7 @@ export interface ChessEngine {
 }
 
 class StockfishEngine implements ChessEngine {
-  name = "Stockfish 10 (local)";
+  name = "Stockfish 19 (local)";
   private worker: Worker;
   private ready: Promise<void>;
   private listener: ((line: string) => void) | null = null;
@@ -48,7 +48,7 @@ class StockfishEngine implements ChessEngine {
     this.worker = new Worker(url);
     this.worker.onmessage = (e) => this.listener?.(String(e.data));
     this.ready = new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Engine timeout")), 8000);
+      const t = setTimeout(() => reject(new Error("Engine timeout")), 15000);
       this.listener = (line) => {
         if (line === "uciok") this.send("isready");
         if (line === "readyok") {
@@ -208,7 +208,10 @@ class FallbackEngine implements ChessEngine {
 
 export async function createEngine(): Promise<ChessEngine> {
   if (typeof Worker === "undefined") return new FallbackEngine();
-  const urls = typeof WebAssembly === "object" ? ["/engine/stockfish.wasm.js", "/engine/stockfish.js"] : ["/engine/stockfish.js"];
+  const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+  const wasm = `${base}engine/stockfish-19-lite-single.js`;
+  const asm = `${base}engine/stockfish-19-asm.js`;
+  const urls = typeof WebAssembly === "object" ? [wasm, asm] : [asm];
   for (const url of urls) {
     try {
       const e = new StockfishEngine(url);
