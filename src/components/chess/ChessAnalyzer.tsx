@@ -148,7 +148,7 @@ export function ChessAnalyzer() {
   const chess = useMemo(() => (legalErr ? null : new Chess(fen)), [fen, legalErr]);
   const legalTargets = useMemo(() => {
     if (mode !== "play" || !selected || !chess) return [];
-    return chess.moves({ square: selected as never, verbose: true }).map((m) => m.to);
+    return chess.moves({ square: selected as import("chess.js").Square, verbose: true }).map((m) => m.to);
   }, [mode, selected, chess]);
 
   const tryMove = (from: string, to: string) => {
@@ -201,7 +201,7 @@ export function ChessAnalyzer() {
       } else if (piece) setSelected(sq);
       return;
     }
-    if (selected && selected !== sq && legalTargets.includes(sq)) return void tryMove(selected, sq);
+    if (selected && selected !== sq && (legalTargets as string[]).includes(sq)) return void tryMove(selected, sq);
     if (piece && piece[0] === parsed.turn) setSelected(sq === selected ? null : sq);
     else setSelected(null);
   };

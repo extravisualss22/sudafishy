@@ -69,9 +69,9 @@ export function buildFen(p: ParsedFen): string {
 export function sanitizeCastling(p: ParsedFen): Castling {
   const b = p.board;
   return {
-    K: p.castling.K && b.e1 === "wK" && b.h1 === "wR",
-    Q: p.castling.Q && b.e1 === "wK" && b.a1 === "wR",
-    k: p.castling.k && b.e8 === "bK" && b.h8 === "bR",
-    q: p.castling.q && b.e8 === "bK" && b.a8 === "bR",
+    K: p.castling.K && b["e1"] === "wK" && b["h1"] === "wR",
+    Q: p.castling.Q && b["e1"] === "wK" && b["a1"] === "wR",
+    k: p.castling.k && b["e8"] === "bK" && b["h8"] === "bR",
+    q: p.castling.q && b["e8"] === "bK" && b["a8"] === "bR",
   };
 }

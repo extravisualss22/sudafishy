@@ -30,3 +30,4 @@ use the editor.
 <!-- LOVABLE:END -->
 
 - Chess engine is accessed only via `src/lib/chess/engine.ts` (`createEngine`): Stockfish worker served from `public/engine`, with a built-in fallback — keeps analysis client-side and swappable.
+- tsconfig disables noUncheckedIndexedAccess/exactOptionalPropertyTypes: board/FEN code indexes heavily and the strictness added noise without catching bugs.
