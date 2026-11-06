@@ -212,8 +212,8 @@ export async function createEngine(): Promise<ChessEngine> {
   const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
   const wasm = `${base}engine/stockfish-19-lite-single.js`;
   const asm = `${base}engine/stockfish-19-asm.js`;
-  const wasmBuild = { url: wasm, name: "Sudafish 19 · WASM" };
-  const jsBuild = { url: asm, name: "Sudafish 19 · JavaScript" };
+  const wasmBuild = { url: wasm, name: "Sudafish" };
+  const jsBuild = { url: asm, name: "Sudafish" };
   const builds = typeof WebAssembly === "object" ? [wasmBuild, jsBuild] : [jsBuild];
   for (const { url, name } of builds) {
     try {

@@ -273,7 +273,7 @@ export function ChessAnalyzer() {
       if (!engineRef.current) {
         setStatus("loading");
         engineRef.current = await createEngine();
-        if (engineRef.current.name === "Sudafish Basic") toast.warning("Sudafish 19 unavailable — using Sudafish Basic");
+        if (engineRef.current.name === "Sudafish Basic") toast.warning("Sudafish unavailable — using Sudafish Basic");
       }
       setStatus("thinking");
       setInfo(null);
@@ -544,7 +544,7 @@ export function ChessAnalyzer() {
               disabled={status === "loading"}
             >
               {status === "loading" ? (
-                <><Loader2 className="animate-spin" /> Starting Sudafish 19…</>
+                <><Loader2 className="animate-spin" /> Starting Sudafish…</>
               ) : status === "thinking" ? (
                 <><Square /> Stop analysis</>
               ) : (
@@ -619,7 +619,7 @@ export function ChessAnalyzer() {
               </div>
               <div className="flex items-center gap-1.5 border-t px-4 py-2 text-[11px] text-muted-foreground">
                 <Cpu className="h-3 w-3" />
-                {showInfo?.engineName ?? engineRef.current?.name ?? "Sudafish 19"}
+                {showInfo?.engineName ?? engineRef.current?.name ?? "Sudafish"}
               </div>
             </Card>
           </section>
