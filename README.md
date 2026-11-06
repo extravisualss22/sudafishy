@@ -59,3 +59,30 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+
+## Screen-share board reader
+
+Use **Share Screen** in the analyzer controls on an HTTPS page (or localhost). Choose a screen, tab, or window in the browser prompt. The compact live preview stays visible until you stop sharing.
+
+1. Choose **Detect Board** to freeze a frame. Drag the square crop over all 64 squares and resize it using its bottom-right corner. Arrow keys move the crop; Shift + arrow keys resize it.
+2. Choose **White at bottom**, **Black at bottom**, or **Auto orientation**, then **Read board**.
+3. Review the estimated pieces, confidence, and highlighted uncertain squares. Choose a piece from the correction palette and click squares to replace/add it; choose **Erase** to remove pieces. Select the correct side to move.
+4. **Use Position** loads a valid reviewed FEN into the main board and starts Sudafish analysis. **Try Again** takes a fresh frame. Initial imports clear castling and en-passant rights because pixels cannot establish move history.
+5. After accepting a position, enable **Watch Board** to sample about every 1.75 seconds. A change must have high confidence on every square and match at least two consecutive samples. With auto-update off it opens review. With auto-update on, only a unique legal next move updates the analyzer immediately; ambiguous turns, missed moves, or uncertain readings require review. A resize or manual change to the main board requires a new crop/review.
+
+**Stop Sharing** is available throughout the flow; browser Stop sharing and closing the component also stop the video tracks. Unsupported capture and declined permission leave manual analysis available.
+
+This is a local silhouette/template heuristic, not a general-purpose perfect chess recognizer. Different piece themes, board highlights, overlays, tiny crops, and unfamiliar layouts can lower accuracy. Confidence scores are heuristic estimates, not calibrated probabilities. Always inspect the review board. Auto orientation can be ambiguous in sparse or advanced positions; select the orientation explicitly when needed. No images are uploaded and no moves are executed on shared sites.
+
+For analysis and training. This feature does not play moves on other sites.
+
+### Validation
+
+```sh
+npm run typecheck
+npm test
+npm run build
+```
+
+Optional real-pixel and full-flow browser checks: with the dev server running on port 5173 and Playwright/Chromium installed, run `node tests/vision-browser.mjs` and `node tests/screen-share-browser.mjs`. `CHROMIUM_PATH` and `VISION_TEST_URL` can select another browser path or local development URL. The automated tests use local fixtures and mock browser permission; they do not capture another person's screen or interact with third-party sites.

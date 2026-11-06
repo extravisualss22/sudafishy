@@ -38,31 +38,45 @@ export interface ChessEngine {
   dispose(): void;
 }
 
+interface SearchRequest {
+  fen: string;
+  opts: AnalyzeOptions;
+  onInfo: (info: EngineInfo) => void;
+  resolve: (info: EngineInfo) => void;
+  reject: (error: Error) => void;
+  info: EngineInfo;
+  lines: Map<number, EngineLine>;
+  canceled: boolean;
+}
+
 class StockfishEngine implements ChessEngine {
   name: string;
   private worker: Worker;
   private ready: Promise<void>;
-  private listener: ((line: string) => void) | null = null;
+  private initialized = false;
+  private disposed = false;
+  private failure: Error | null = null;
+  private active: SearchRequest | null = null;
+  private pending: SearchRequest | null = null;
+  private barrier = false;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private resolveReady!: () => void;
+  private rejectReady!: (error: Error) => void;
 
   constructor(url: string, name: string) {
     this.name = name;
     this.worker = new Worker(url);
-    this.worker.onmessage = (e) => this.listener?.(String(e.data));
     this.ready = new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Engine timeout")), 15000);
-      this.listener = (line) => {
-        if (line === "uciok") this.send("isready");
-        if (line === "readyok") {
-          clearTimeout(t);
-          resolve();
-        }
-      };
-      this.worker.onerror = (err) => {
-        clearTimeout(t);
-        reject(err);
-      };
-      this.send("uci");
+      this.resolveReady = resolve;
+      this.rejectReady = reject;
     });
+    this.worker.onmessage = (event) => {
+      for (const line of String(event.data).split(/\r?\n/)) this.receive(line.trim());
+    };
+    this.worker.onerror = (event) =>
+      this.fail(new Error(event.message || "Sudafish worker failed"));
+    this.deadline(15000, "Sudafish initialization timed out");
+    this.send("uci");
   }
 
   init() {
@@ -73,60 +87,167 @@ class StockfishEngine implements ChessEngine {
     this.worker.postMessage(cmd);
   }
 
-  async analyze(fen: string, opts: AnalyzeOptions, onInfo: (i: EngineInfo) => void) {
-    await this.ready;
-    const whiteToMove = fen.split(" ")[1] !== "b";
-    const sign = whiteToMove ? 1 : -1;
-    const lines = new Map<number, EngineLine>();
-    let info: EngineInfo = { lines: [], depth: 0, done: false, engineName: this.name };
-    return new Promise<EngineInfo>((resolve) => {
-      this.listener = (line) => {
-        if (line.startsWith("info") && line.includes(" pv ")) {
-          const tok = line.split(" ");
-          const get = (k: string) => {
-            const i = tok.indexOf(k);
-            return i >= 0 ? tok[i + 1] : undefined;
-          };
-          const depth = Number(get("depth"));
-          const mpv = Number(get("multipv") ?? 1);
-          const scoreType = get("score");
-          const si = tok.indexOf("score");
-          const val = Number(tok[si + 2]);
-          const pv = tok.slice(tok.indexOf("pv") + 1);
-          lines.set(mpv, {
-            multipv: mpv,
-            depth,
-            pv,
-            cp: scoreType === "cp" ? val * sign : undefined,
-            mate: scoreType === "mate" ? val * sign : undefined,
-          });
-          info = {
-            ...info,
-            depth: Math.max(info.depth, depth),
-            nodes: Number(get("nodes")) || info.nodes,
-            nps: Number(get("nps")) || info.nps,
-            lines: [...lines.values()].sort((a, b) => a.multipv - b.multipv).slice(0, opts.multiPv),
-          };
-          onInfo(info);
-        } else if (line.startsWith("bestmove")) {
-          const bm = line.split(" ")[1];
-          info = { ...info, bestMove: bm && bm !== "(none)" ? bm : undefined, done: true };
-          onInfo(info);
-          resolve(info);
-        }
+  private deadline(ms: number, message: string) {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.fail(new Error(message)), ms);
+  }
+
+  private fail(error: Error) {
+    if (this.disposed || this.failure) return;
+    this.failure = error;
+    clearTimeout(this.timer);
+    this.worker.terminate();
+    this.rejectReady(error);
+    this.active?.reject(error);
+    this.pending?.reject(error);
+    this.active = this.pending = null;
+    this.barrier = false;
+  }
+
+  private cancel(request: SearchRequest | null) {
+    if (!request || request.canceled) return;
+    request.canceled = true;
+    // Settling canceled work prevents old analyzer calls from hanging. No old
+    // callback is delivered after cancellation, even while UCI drains its output.
+    request.resolve({ ...request.info, done: true });
+  }
+
+  analyze(fen: string, opts: AnalyzeOptions, onInfo: (i: EngineInfo) => void): Promise<EngineInfo> {
+    if (this.disposed || this.failure)
+      return Promise.reject(this.failure || new Error("Engine closed"));
+    this.cancel(this.pending);
+    const promise = new Promise<EngineInfo>((resolve, reject) => {
+      this.pending = {
+        fen,
+        opts,
+        onInfo,
+        resolve,
+        reject,
+        canceled: false,
+        lines: new Map(),
+        info: { lines: [], depth: 0, done: false, engineName: this.name },
       };
-      this.send("stop");
-      this.send(`setoption name MultiPV value ${opts.multiPv}`);
-      this.send("ucinewgame");
-      this.send(`position fen ${fen}`);
-      this.send(`go depth ${opts.depth} movetime ${opts.movetimeMs}`);
     });
+    if (this.active && !this.active.canceled) {
+      this.cancel(this.active);
+      this.deadline(10000, "Sudafish did not stop its previous search");
+      this.send("stop");
+    }
+    this.pump();
+    return promise;
+  }
+
+  private pump() {
+    if (
+      !this.initialized ||
+      this.disposed ||
+      this.failure ||
+      this.active ||
+      this.barrier ||
+      !this.pending
+    )
+      return;
+    this.barrier = true;
+    this.deadline(10000, "Sudafish is not responding");
+    this.send("isready");
+  }
+
+  private receive(line: string) {
+    if (this.disposed || this.failure) return;
+    if (!this.initialized) {
+      if (line === "uciok") this.send("isready");
+      if (line === "readyok") {
+        clearTimeout(this.timer);
+        this.initialized = true;
+        this.resolveReady();
+        this.pump();
+      }
+      return;
+    }
+    if (line === "readyok" && this.barrier) {
+      this.barrier = false;
+      clearTimeout(this.timer);
+      const request = this.pending;
+      this.pending = null;
+      if (!request) return;
+      this.active = request;
+      this.send(`setoption name MultiPV value ${request.opts.multiPv}`);
+      this.send("ucinewgame");
+      this.send(`position fen ${request.fen}`);
+      this.deadline(
+        Math.max(10000, request.opts.movetimeMs + 15000),
+        "Sudafish analysis timed out",
+      );
+      this.send(`go depth ${request.opts.depth} movetime ${request.opts.movetimeMs}`);
+      return;
+    }
+    const request = this.active;
+    if (!request) return;
+    if (line.startsWith("bestmove ")) {
+      clearTimeout(this.timer);
+      this.active = null;
+      if (!request.canceled) {
+        const bm = line.split(" ")[1];
+        const info = {
+          ...request.info,
+          bestMove: bm && bm !== "(none)" && bm !== "0000" ? bm : undefined,
+          done: true,
+        };
+        request.onInfo(info);
+        request.resolve(info);
+      }
+      this.pump();
+      return;
+    }
+    if (request.canceled || !line.startsWith("info ") || !line.includes(" pv ")) return;
+    const tok = line.split(/\s+/);
+    const get = (key: string) => {
+      const i = tok.indexOf(key);
+      return i >= 0 ? tok[i + 1] : undefined;
+    };
+    const depth = Number(get("depth"));
+    const mpv = Number(get("multipv") ?? 1);
+    const si = tok.indexOf("score");
+    const value = Number(tok[si + 2]);
+    if (!Number.isFinite(depth) || si < 0 || !Number.isFinite(value)) return;
+    const sign = request.fen.split(" ")[1] === "b" ? -1 : 1;
+    request.lines.set(mpv, {
+      multipv: mpv,
+      depth,
+      pv: tok.slice(tok.indexOf("pv") + 1),
+      cp: get("score") === "cp" ? value * sign : undefined,
+      mate: get("score") === "mate" ? value * sign : undefined,
+    });
+    request.info = {
+      ...request.info,
+      depth: Math.max(request.info.depth, depth),
+      nodes: Number(get("nodes")) || request.info.nodes,
+      nps: Number(get("nps")) || request.info.nps,
+      lines: [...request.lines.values()]
+        .sort((a, b) => a.multipv - b.multipv)
+        .slice(0, request.opts.multiPv),
+    };
+    request.onInfo(request.info);
   }
 
   stop() {
-    this.send("stop");
+    this.cancel(this.pending);
+    this.pending = null;
+    if (this.active && !this.active.canceled) {
+      this.cancel(this.active);
+      this.deadline(10000, "Sudafish did not stop its previous search");
+      this.send("stop");
+    }
   }
+
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    clearTimeout(this.timer);
+    this.cancel(this.active);
+    this.cancel(this.pending);
+    this.active = this.pending = null;
+    this.rejectReady(new Error("Engine closed"));
     this.worker.terminate();
   }
 }
@@ -134,7 +255,8 @@ class StockfishEngine implements ChessEngine {
 /** Minimal material-based negamax used when Stockfish is unavailable. */
 class FallbackEngine implements ChessEngine {
   name = "Sudafish Basic";
-  private stopped = false;
+  private generation = 0;
+  private disposed = false;
   private static V: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 
   private evaluate(c: Chess): number {
@@ -162,7 +284,8 @@ class FallbackEngine implements ChessEngine {
   }
 
   async analyze(fen: string, opts: AnalyzeOptions, onInfo: (i: EngineInfo) => void) {
-    this.stopped = false;
+    if (this.disposed) throw new Error("Engine closed");
+    const generation = ++this.generation;
     this.nodes = 0;
     const t0 = performance.now();
     const c = new Chess(fen);
@@ -170,7 +293,7 @@ class FallbackEngine implements ChessEngine {
     const depth = Math.min(opts.depth, 3);
     const scored: { uci: string; v: number }[] = [];
     for (const m of c.moves({ verbose: true })) {
-      if (this.stopped) break;
+      if (generation !== this.generation) break;
       c.move(m);
       const v = -this.negamax(c, depth - 1, -Infinity, Infinity);
       c.undo();
@@ -198,13 +321,16 @@ class FallbackEngine implements ChessEngine {
       done: true,
       engineName: this.name,
     };
-    onInfo(info);
+    if (generation === this.generation) onInfo(info);
     return info;
   }
   stop() {
-    this.stopped = true;
+    this.generation++;
   }
-  dispose() {}
+  dispose() {
+    this.disposed = true;
+    this.stop();
+  }
 }
 
 export async function createEngine(): Promise<ChessEngine> {
