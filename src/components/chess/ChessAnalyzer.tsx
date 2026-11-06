@@ -273,7 +273,7 @@ export function ChessAnalyzer() {
       if (!engineRef.current) {
         setStatus("loading");
         engineRef.current = await createEngine();
-        if (engineRef.current.name.includes("fallback")) toast.warning("Stockfish unavailable — using basic fallback engine");
+        if (engineRef.current.name === "Sudafish Basic") toast.warning("Sudafish 19 unavailable — using Sudafish Basic");
       }
       setStatus("thinking");
       setInfo(null);
@@ -544,7 +544,7 @@ export function ChessAnalyzer() {
               disabled={status === "loading"}
             >
               {status === "loading" ? (
-                <><Loader2 className="animate-spin" /> Starting engine…</>
+                <><Loader2 className="animate-spin" /> Starting Sudafish 19…</>
               ) : status === "thinking" ? (
                 <><Square /> Stop analysis</>
               ) : (
@@ -619,14 +619,20 @@ export function ChessAnalyzer() {
               </div>
               <div className="flex items-center gap-1.5 border-t px-4 py-2 text-[11px] text-muted-foreground">
                 <Cpu className="h-3 w-3" />
-                {showInfo?.engineName ?? "Stockfish runs locally in your browser"}
+                {showInfo?.engineName ?? engineRef.current?.name ?? "Sudafish 19"}
               </div>
             </Card>
           </section>
         </main>
 
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground">
-          For analysis and training. Do not use engine assistance in live rated games.
+        <footer className="space-y-1 border-t px-4 py-4 text-center text-xs text-muted-foreground">
+          <p>For analysis and training. Do not use engine assistance in live rated games.</p>
+          <p>
+            Sudafish is powered by Stockfish 19 and distributed under the GNU GPL.
+            {" "}<a className="underline underline-offset-2" href={`${import.meta.env.BASE_URL}engine/Copying.txt`} target="_blank" rel="noopener noreferrer">License</a>
+            {" · "}<a className="underline underline-offset-2" href="https://github.com/nmrugg/stockfish.js/tree/v19.0.1" target="_blank" rel="noopener noreferrer">Browser build source</a>
+            {" · "}<a className="underline underline-offset-2" href="https://github.com/official-stockfish/Stockfish/tree/sf_19" target="_blank" rel="noopener noreferrer">Stockfish source</a>
+          </p>
         </footer>
 
         <SettingsDialog open={dlg === "settings"} onOpenChange={(o) => setDlg(o ? "settings" : null)} settings={settings} onChange={updateSettings} />

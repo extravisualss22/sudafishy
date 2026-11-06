@@ -39,12 +39,13 @@ export interface ChessEngine {
 }
 
 class StockfishEngine implements ChessEngine {
-  name = "Stockfish 19 (local)";
+  name: string;
   private worker: Worker;
   private ready: Promise<void>;
   private listener: ((line: string) => void) | null = null;
 
-  constructor(url: string) {
+  constructor(url: string, name: string) {
+    this.name = name;
     this.worker = new Worker(url);
     this.worker.onmessage = (e) => this.listener?.(String(e.data));
     this.ready = new Promise((resolve, reject) => {
@@ -132,7 +133,7 @@ class StockfishEngine implements ChessEngine {
 
 /** Minimal material-based negamax used when Stockfish is unavailable. */
 class FallbackEngine implements ChessEngine {
-  name = "Built-in fallback (basic)";
+  name = "Sudafish Basic";
   private stopped = false;
   private static V: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
 
@@ -211,10 +212,12 @@ export async function createEngine(): Promise<ChessEngine> {
   const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
   const wasm = `${base}engine/stockfish-19-lite-single.js`;
   const asm = `${base}engine/stockfish-19-asm.js`;
-  const urls = typeof WebAssembly === "object" ? [wasm, asm] : [asm];
-  for (const url of urls) {
+  const wasmBuild = { url: wasm, name: "Sudafish 19 · WASM" };
+  const jsBuild = { url: asm, name: "Sudafish 19 · JavaScript" };
+  const builds = typeof WebAssembly === "object" ? [wasmBuild, jsBuild] : [jsBuild];
+  for (const { url, name } of builds) {
     try {
-      const e = new StockfishEngine(url);
+      const e = new StockfishEngine(url, name);
       await e.init();
       return e;
     } catch {

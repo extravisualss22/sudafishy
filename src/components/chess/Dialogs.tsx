@@ -43,7 +43,7 @@ export function SettingsDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Settings</DialogTitle>
-          <DialogDescription>Engine strength and board appearance. Saved on this device.</DialogDescription>
+          <DialogDescription>Sudafish 19 strength and board appearance. Saved on this device.</DialogDescription>
         </DialogHeader>
         <div className="space-y-6 py-2">
           <div className="space-y-3">
