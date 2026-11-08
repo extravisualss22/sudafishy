@@ -1,5 +1,5 @@
 // Workflow inspired by position-analysis sites (e.g. NextChessMove.com); all code,
-// copy and branding here are original to travis.suda.
+// copy and branding here are original to sudalol.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { toast } from "sonner";
@@ -351,8 +351,8 @@ export function ChessAnalyzer() {
               throw new Error("Analyzer closed");
             }
             engineRef.current = engine;
-            if (engine.name === "Sudafish Basic")
-              toast.warning("Sudafish unavailable — using Sudafish Basic");
+            if (engine.name === "Basic analysis fallback")
+              toast.warning("Stockfish unavailable — using Basic analysis fallback");
             return engine;
           })
           .catch((error) => {
@@ -462,10 +462,11 @@ export function ChessAnalyzer() {
                 <span className="bg-brand" />
               </span>
               <span className="font-display text-xl font-bold tracking-tight">
-                travis<span className="text-primary">.</span>suda
+                sudalol
               </span>
             </a>
             <nav className="flex items-center gap-1">
+              <a href="/spectator" className="px-2 text-xs font-semibold text-primary">Spectator</a>
               <Button variant="ghost" size="sm" onClick={() => setDlg("pgn")}>
                 <FileUp /> <span className="hidden sm:inline">Import PGN</span>
               </Button>
@@ -769,7 +770,7 @@ export function ChessAnalyzer() {
             >
               {status === "loading" ? (
                 <>
-                  <Loader2 className="animate-spin" /> Starting Sudafish…
+                  <Loader2 className="animate-spin" /> Starting Stockfish…
                 </>
               ) : status === "thinking" ? (
                 <>
@@ -865,7 +866,7 @@ export function ChessAnalyzer() {
               </div>
               <div className="flex items-center gap-1.5 border-t px-4 py-2 text-[11px] text-muted-foreground">
                 <Cpu className="h-3 w-3" />
-                {showInfo?.engineName ?? engineRef.current?.name ?? "Sudafish"}
+                {showInfo?.engineName ?? engineRef.current?.name ?? "Stockfish"}
               </div>
             </Card>
           </section>
@@ -874,7 +875,7 @@ export function ChessAnalyzer() {
         <footer className="space-y-1 border-t px-4 py-4 text-center text-xs text-muted-foreground">
           <p>For analysis and training. Do not use engine assistance in live rated games.</p>
           <p>
-            Sudafish is powered by Stockfish 19 and distributed under the GNU GPL.{" "}
+            This separate analysis tool uses Stockfish 19, distributed under the GNU GPL. sudalol gen0 selects its own moves in simulations.{" "}
             <a
               className="underline underline-offset-2"
               href={`${import.meta.env.BASE_URL}engine/Copying.txt`}

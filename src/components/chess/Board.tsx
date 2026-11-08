@@ -14,6 +14,7 @@ interface Drag {
 }
 
 interface BoardProps {
+  readOnly?: boolean;
   board: BoardMap;
   flipped: boolean;
   showCoords: boolean;
@@ -127,7 +128,7 @@ export function Board(p: BoardProps) {
                 onFocus={() => setFocus(sq)}
                 onClick={() => p.onSquareClick(sq)}
                 onPointerDown={(e) => {
-                  if (piece && e.button === 0) start({ kind: "square", square: sq, piece }, e);
+                  if (!p.readOnly && piece && e.button === 0) start({ kind: "square", square: sq, piece }, e);
                 }}
                 className={cn(
                   "relative aspect-square outline-none focus-visible:z-10 focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-ring",

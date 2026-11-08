@@ -20,11 +20,11 @@ vi.mock("./ScreenSharePanel", () => ({
 import { ChessAnalyzer } from "./ChessAnalyzer";
 
 let engine: ChessEngine;
-const result: EngineInfo = { lines: [], depth: 1, done: true, engineName: "Sudafish" };
+const result: EngineInfo = { lines: [], depth: 1, done: true, engineName: "Stockfish" };
 beforeEach(() => {
   localStorage.clear();
   engine = {
-    name: "Sudafish",
+    name: "Stockfish",
     analyze: vi.fn().mockResolvedValue(result),
     stop: vi.fn(),
     dispose: vi.fn(),

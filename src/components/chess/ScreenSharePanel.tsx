@@ -236,7 +236,7 @@ export function ScreenSharePanel({ turn, fen, onApply }: Props) {
       setConfirmed(true);
       setPhase("sharing");
       setMessage(
-        "Position loaded into Sudafish. Castling and en-passant rights were cleared because an image cannot establish them.",
+        "Position loaded into Stockfish. Castling and en-passant rights were cleared because an image cannot establish them.",
       );
     } catch (error) {
       setMessage(
@@ -303,7 +303,7 @@ export function ScreenSharePanel({ turn, fen, onApply }: Props) {
         if (auto && inferred) {
           if (latest.current.onApply({ ...result.board }, nextTurn, true, inferred) !== false) {
             lastFen.current = inferred;
-            setMessage("Stable board change detected. Sudafish is analyzing the updated position.");
+            setMessage("Stable board change detected. Stockfish is analyzing the updated position.");
             return;
           }
         }

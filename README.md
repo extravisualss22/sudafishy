@@ -1,88 +1,71 @@
-# Sudafishy
+# sudalol
 
-Build a polished responsive web app named "travis.suda" inspired by the workflow of NextChessMove.com, but do NOT copy its proprietary code, logos, text, or branding. Recreate the core chess-analysis experience with an original Travis-branded visual identity.
+An independent beginner chess engine and headless simulation foundation for a school project. **Phase 1 only:** no neural network, training, teacher analysis, or automatic generation promotion. No Elo claim is made.
 
-Reference behavior/layout:
-- Desktop: large interactive 8x8 chessboard on the left, compact controls immediately to the right, and an analysis/settings panel farther right. Mobile: stack into one column.
-- Allow dragging pieces to configure any position.
-- Piece palette for adding white/black chess pieces.
-- Controls: White to move / Black to move; castling rights checkboxes for White kingside, White queenside, Black kingside, Black queenside.
-- Actions: Reset, Clear/Capture All, Flip board, Undo, Redo.
-- Show editable FEN below the board with copy button.
-- PGN import field/modal and ability to step through imported moves.
-- Main CTA: "Calculate Next Move".
-- Run Stockfish locally in the browser using a Web Worker/WebAssembly-compatible approach if feasible. If the dependency cannot run in preview, implement a clean engine adapter with a working fallback/mock so the UI remains testable, and make the integration point obvious.
-- When analysis runs, show best move, evaluation (+/- pawns or mate), depth, nodes/NPS if available, principal variation, and top 3 candidate lines.
-- Draw the recommended move as an arrow/highlight on the board.
-- A settings modal with engine think time/depth, number of lines, coordinates on/off, and theme.
-- Saved Boards modal using localStorage: create, rename, load, delete positions.
-- No login or paywall. All implemented local features should be available.
-- Add a small footer note: "For analysis and training. Do not use engine assistance in live rated games."
+The existing React chess analyzer remains at `/`. It explicitly identifies its separate Stockfish analysis engine. **Stockfish never selects sudalol gen0's simulation moves.** The new observation dashboard is at `/spectator`.
 
-Brand/design:
-- Header brand text: "travis.suda"
-- Original modern chess aesthetic, not a pixel-perfect clone. Clean off-white/light theme by default, dark mode optional.
-- Green/cream chessboard palette reminiscent of traditional analysis boards but use original styling.
-- Crisp cards, subtle borders/shadows, responsive spacing, accessible controls.
-- Use shadcn/ui + Tailwind.
-- Make it feel production-ready with tasteful microinteractions and loading states.
+## Quick start
 
-Technical:
-- Full-stack TypeScript project, but keep analysis local/client-side unless needed.
-- Use a reliable chess rules library such as chess.js for legal move/FEN/PGN handling.
-- Prefer a robust React chessboard component or implement the board cleanly.
-- Ensure illegal moves can be rejected in play mode, while a setup/edit mode allows arbitrary board construction.
-- Include keyboard accessibility where practical.
-- Do not use Next Chess Move trademarks except in source-code comments explaining inspiration, and do not copy text from their site.
-
-Deliver a complete functional first version, not just a static mockup.
-
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://sudafishy.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/9662ef0b-e317-417d-b6d1-5702d0fd9e61).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Use **Node.js 22.18+ or 24+** and pnpm. Native Node TypeScript support runs the simulation; no Python or GPU setup is needed.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+pnpm install --frozen-lockfile
+
+# One automated game: sudalol gen0 (White) vs weak bot (Black)
+pnpm simulate -- --games 1 --workers 1
+
+# 100 games, with a conservative detected-CPU worker preset
+pnpm simulate -- --games 100 --mode normal
+
+# Independent self-play
+pnpm simulate -- --games 10 --workers 2 --white gen0 --black gen0
+
+# Sequential worker-count benchmark
+pnpm benchmark -- --games 12 --worker-counts 1,2,4 --search-depth 1
+
+# Simulator + local observation API + existing website
+pnpm spectator -- --games 100 --workers 2 --search-depth 1
 ```
 
+Open **http://127.0.0.1:5173/spectator**. The dashboard remains available for replay after the batch finishes. Ctrl+C ends the session and terminates its workers/server. Close other dev servers on port 5173 first; the read-only observation API uses 127.0.0.1:8787.
 
-## Screen-share board reader
+Website alone: `pnpm dev -- --host 127.0.0.1 --port 5173`. On a hosted site, import a real `snapshot.json`; the hosted website does not start local CPU workers. Existing position editing, PGN import, saved boards, analysis, and screen-share review remain available.
 
-Use **Share Screen** in the analyzer controls on an HTTPS page (or localhost). Choose a screen, tab, or window in the browser prompt. The compact live preview stays visible until you stop sharing.
+## Results and controls
 
-1. Choose **Detect Board** to freeze a frame. Drag the square crop over all 64 squares and resize it using its bottom-right corner. Arrow keys move the crop; Shift + arrow keys resize it.
-2. Choose **White at bottom**, **Black at bottom**, or **Auto orientation**, then **Read board**.
-3. Review the estimated pieces, confidence, and highlighted uncertain squares. Choose a piece from the correction palette and click squares to replace/add it; choose **Erase** to remove pieces. Select the correct side to move.
-4. **Use Position** loads a valid reviewed FEN into the main board and starts Sudafish analysis. **Try Again** takes a fresh frame. Initial imports clear castling and en-passant rights because pixels cannot establish move history.
-5. After accepting a position, enable **Watch Board** to sample about every 1.75 seconds. A change must have high confidence on every square and match at least two consecutive samples. With auto-update off it opens review. With auto-update on, only a unique legal next move updates the analyzer immediately; ambiguous turns, missed moves, or uncertain readings require review. A resize or manual change to the main board requires a new crop/review.
+Every run gets a unique `runs/<UTC-timestamp>-<id>/` directory:
 
-**Stop Sharing** is available throughout the flow; browser Stop sharing and closing the component also stop the video tracks. Unsupported capture and declined permission leave manual analysis available.
+- `games-00000.jsonl`: one complete structured game per line.
+- `games-00000.pgn`: complete games with matching game IDs.
+- Additional paired shards every 1,000 completed games; never one file per game.
+- `config.json`, `summary.json`, `snapshot.json`: reproducibility, aggregate results, and a bounded observation feed.
 
-This is a local silhouette/template heuristic, not a general-purpose perfect chess recognizer. Different piece themes, board highlights, overlays, tiny crops, and unfamiliar layouts can lower accuracy. Confidence scores are heuristic estimates, not calibrated probabilities. Always inspect the review board. Auto orientation can be ambiguous in sparse or advanced positions; select the orientation explicitly when needed. No images are uploaded and no moves are executed on shared sites.
+`--max-moves` counts **full moves** (two player moves). JSONL `moveCount`, dashboard moves, and average game length count **plies** (one player's move). Nodes count search visits, including quiescence, not unique positions. Move caps are saved as `max-moves-adjudication`, distinct from rule-based draws.
 
-For analysis and training. This feature does not play moves on other sites.
+Options: `--search-depth 1..8`, `--max-nodes 100..1000000`, `--max-moves 1..1000`, `--workers N`, `--white gen0|weak`, `--black gen0|weak`, `--seed N`, `--output PATH`, `--fen "FEN"`, and `--mode normal|overnight`. See `node sim/cli.ts simulate --help` and the [Phase 1 guide](docs/phase1.md).
 
-### Validation
+## Validation
 
 ```sh
-npm run typecheck
-npm test
-npm run build
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-Optional real-pixel and full-flow browser checks: with the dev server running on port 5173 and Playwright/Chromium installed, run `node tests/vision-browser.mjs` and `node tests/screen-share-browser.mjs`. `CHROMIUM_PATH` and `VISION_TEST_URL` can select another browser path or local development URL. The automated tests use local fixtures and mock browser permission; they do not capture another person's screen or interact with third-party sites.
+Tests cover the original website plus chess rules, legal/tactical decisions, search limits, generation protection, complete games, parallel saves, spectator independence, and observation API/UI behavior. See [actual validation results](docs/validation.md).
+
+## Existing screen-share board reader
+
+Use **Share Screen** on HTTPS or localhost. Choose a screen, tab, or window in the browser prompt; no image leaves the browser.
+
+1. **Detect Board** freezes a frame. Drag/resize the square crop over all 64 squares. Arrow keys move it; Shift + arrows resize it.
+2. Select White/Black at bottom or Auto orientation, then **Read board**.
+3. Review pieces and uncertain squares. Correct with the palette or Erase, and select the side to move.
+4. **Use Position** loads the reviewed FEN into the separate Stockfish analyzer. Castling and en-passant rights are cleared because pixels cannot establish history. **Try Again** captures a fresh frame.
+5. **Watch Board** samples about every 1.75 seconds and requires repeated high-confidence observations. Auto-update accepts only a unique legal next move; ambiguity requires review. Resize or manual board changes require a new crop/review.
+
+**Stop Sharing**, browser Stop sharing, and unmounting stop the video tracks. Declined permission leaves manual analysis usable. Recognition is a local silhouette/template heuristic, not a general-purpose vision model; unfamiliar themes, overlays, small crops, and sparse positions may require correction. It never executes moves on another site.
+
+Pre-existing optional pixel/video scripts remain in `tests/vision-browser.mjs` and `tests/screen-share-browser.mjs`; they require separately installed Playwright/Chromium and a dev server. They are not part of `pnpm test`.
+
+For analysis and training. Do not use engine assistance in live rated games. Stockfish binaries and their GPL notice/source links are preserved under `public/engine/` and in the analyzer footer. The existing Lovable connection and repository history remain intact.
