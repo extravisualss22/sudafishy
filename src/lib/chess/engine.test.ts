@@ -50,7 +50,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Sudafish analysis lifecycle", () => {
+describe("Stockfish analysis lifecycle", () => {
   it("drains canceled output before starting only the latest queued position", async () => {
     const { engine, worker } = await workerEngine();
     const oldInfo = vi.fn(),
@@ -124,7 +124,7 @@ describe("Sudafish analysis lifecycle", () => {
   it("terminates failed initialization attempts before falling back", async () => {
     TestWorker.failStartup = true;
     const { engine } = await workerEngine();
-    expect(engine.name).toBe("Sudafish Basic");
+    expect(engine.name).toBe("Basic analysis fallback");
     expect(TestWorker.instances).toHaveLength(2);
     expect(TestWorker.instances.every((worker) => worker.terminated)).toBe(true);
   });

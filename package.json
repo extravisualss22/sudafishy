@@ -1,5 +1,5 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "sudalol",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -10,9 +10,13 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run",
+    "test": "vitest run && node --test tests/simulation.test.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "simulate": "node sim/cli.ts simulate",
+    "benchmark": "node sim/cli.ts benchmark",
+    "spectator": "node sim/cli.ts spectate",
+    "test:sim": "node --test tests/simulation.test.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -50,7 +54,7 @@
     "@tanstack/react-router": "1.170.41",
     "@tanstack/react-start": "1.168.60",
     "@tanstack/router-plugin": "1.168.42",
-    "chess.js": "^1.4.0",
+    "chess.js": "1.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -94,5 +98,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "8.1.5",
     "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }

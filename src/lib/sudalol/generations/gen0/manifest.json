@@ -1,0 +1,11 @@
+{
+  "id": "gen0",
+  "name": "sudalol gen0",
+  "kind": "handcrafted",
+  "rules": "chess.js@1.4.0",
+  "files": {
+    "engine.ts": "54b624d4fb196b980b051b8388225cb22ad86a75093dae2e7114e401be7d8ed4",
+    "evaluation.ts": "d40e2f1716e13acd5d6edd4807fb602c6c49316089360dd5d0c0d2fecf5847c6"
+  },
+  "parent": null
+}

@@ -74,8 +74,8 @@ class StockfishEngine implements ChessEngine {
       for (const line of String(event.data).split(/\r?\n/)) this.receive(line.trim());
     };
     this.worker.onerror = (event) =>
-      this.fail(new Error(event.message || "Sudafish worker failed"));
-    this.deadline(15000, "Sudafish initialization timed out");
+      this.fail(new Error(event.message || "Stockfish worker failed"));
+    this.deadline(15000, "Stockfish initialization timed out");
     this.send("uci");
   }
 
@@ -130,7 +130,7 @@ class StockfishEngine implements ChessEngine {
     });
     if (this.active && !this.active.canceled) {
       this.cancel(this.active);
-      this.deadline(10000, "Sudafish did not stop its previous search");
+      this.deadline(10000, "Stockfish did not stop its previous search");
       this.send("stop");
     }
     this.pump();
@@ -148,7 +148,7 @@ class StockfishEngine implements ChessEngine {
     )
       return;
     this.barrier = true;
-    this.deadline(10000, "Sudafish is not responding");
+    this.deadline(10000, "Stockfish is not responding");
     this.send("isready");
   }
 
@@ -176,7 +176,7 @@ class StockfishEngine implements ChessEngine {
       this.send(`position fen ${request.fen}`);
       this.deadline(
         Math.max(10000, request.opts.movetimeMs + 15000),
-        "Sudafish analysis timed out",
+        "Stockfish analysis timed out",
       );
       this.send(`go depth ${request.opts.depth} movetime ${request.opts.movetimeMs}`);
       return;
@@ -235,7 +235,7 @@ class StockfishEngine implements ChessEngine {
     this.pending = null;
     if (this.active && !this.active.canceled) {
       this.cancel(this.active);
-      this.deadline(10000, "Sudafish did not stop its previous search");
+      this.deadline(10000, "Stockfish did not stop its previous search");
       this.send("stop");
     }
   }
@@ -254,7 +254,7 @@ class StockfishEngine implements ChessEngine {
 
 /** Minimal material-based negamax used when Stockfish is unavailable. */
 class FallbackEngine implements ChessEngine {
-  name = "Sudafish Basic";
+  name = "Basic analysis fallback";
   private generation = 0;
   private disposed = false;
   private static V: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
@@ -338,8 +338,8 @@ export async function createEngine(): Promise<ChessEngine> {
   const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
   const wasm = `${base}engine/stockfish-19-lite-single.js`;
   const asm = `${base}engine/stockfish-19-asm.js`;
-  const wasmBuild = { url: wasm, name: "Sudafish" };
-  const jsBuild = { url: asm, name: "Sudafish" };
+  const wasmBuild = { url: wasm, name: "Stockfish" };
+  const jsBuild = { url: asm, name: "Stockfish" };
   const builds = typeof WebAssembly === "object" ? [wasmBuild, jsBuild] : [jsBuild];
   for (const { url, name } of builds) {
     try {
