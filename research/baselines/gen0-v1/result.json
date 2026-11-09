@@ -1,0 +1,42 @@
+{
+  "generation": "gen0",
+  "games": 32,
+  "wins": 31,
+  "draws": 0,
+  "losses": 1,
+  "moves": 1715,
+  "nodes": 114739,
+  "colors": {
+    "white": 16,
+    "black": 16
+  },
+  "terminations": {
+    "checkmate": 32
+  },
+  "opponents": {
+    "weak": 32
+  },
+  "searchSettings": [
+    {
+      "depth": 1,
+      "maxNodes": 500,
+      "quiescenceDepth": 4,
+      "tableEntries": 10000
+    }
+  ],
+  "score": 0.96875,
+  "averageGameLength": 53.59375,
+  "scoreInterval95": [
+    0.8425539219962727,
+    0.9944622826374491
+  ],
+  "estimatedChessElo": {
+    "status": "unrated",
+    "value": null,
+    "reason": "Reference opponents have no validated human-Elo calibration"
+  },
+  "schemaVersion": 2,
+  "createdAt": "2026-11-09T03:57:02Z",
+  "planFingerprint": "1363def0b8294a3258d3999b8e0a632bafc863f449c00ce302c8055c8628dae9",
+  "run": "gen0-baseline-v1"
+}

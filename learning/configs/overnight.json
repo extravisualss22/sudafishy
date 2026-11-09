@@ -1,0 +1,9 @@
+{
+  "games": 200,
+  "mix": {"older": 0.4, "self": 0.25, "weak": 0.15, "fixed": 0.15, "stockfish": 0.05},
+  "simulation": {"workers": 4, "seed": 20261108, "mode": "overnight", "maxMoves": 150, "search": {"depth": 2, "maxNodes": 2000, "quiescenceDepth": 4, "tableEntries": 10000}},
+  "teacher": {"threads": 1, "hash": 128, "nodes": 10000, "depth": 12, "maxPerGame": 16},
+  "training": {"device": "auto", "batchSize": 128, "epochs": 8, "checkpointEvery": 10, "cpuThreads": 2},
+  "matchGames": 64,
+  "acceptance": {"min_games": 64, "min_score": 0.55, "min_lower": 0.5}
+}

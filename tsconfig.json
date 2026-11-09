@@ -6,7 +6,9 @@
     "vitest.config.ts",
     "eslint.config.js",
     "sim/**/*.ts",
-    "tests/simulation.test.ts"
+    "tests/simulation.test.ts",
+    "learning/**/*.ts",
+    "tests/learning.test.ts"
   ],
   "compilerOptions": {
     "target": "ES2022",

@@ -185,7 +185,7 @@ test("parallel simulation saves unique, replayable games and accurate aggregate 
 test("gen0 self-play, invalid opponent, and cancellation", async () => {
   const game = await playGame({ ...options(), black: "gen0", maxMoves: 2 });
   assert.equal(game.record.generation.black, "gen0"); assert.equal(game.record.moveCount, 4);
-  await assert.rejects(createOpponent("stockfish", 1), /Invalid generation/);
+  await assert.rejects(createOpponent("unavailable-opponent", 1), /Invalid generation/);
   const directory = await mkdtemp(join(tmpdir(), "sudalol-stop-"));
   try {
     const controller = new AbortController(); controller.abort();

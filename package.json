@@ -10,13 +10,14 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run && node --test tests/simulation.test.ts",
+    "test": "vitest run && node --test tests/simulation.test.ts tests/learning.test.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "simulate": "node sim/cli.ts simulate",
     "benchmark": "node sim/cli.ts benchmark",
     "spectator": "node sim/cli.ts spectate",
-    "test:sim": "node --test tests/simulation.test.ts"
+    "test:sim": "node --test tests/simulation.test.ts",
+    "dashboard": "node learning/dashboard.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"

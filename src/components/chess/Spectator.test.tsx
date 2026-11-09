@@ -27,7 +27,8 @@ it("playback pauses independently while real telemetry continues polling", async
   await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
   expect((screen.getByLabelText("Displayed move") as HTMLInputElement).value).toBe("0");
   expect(screen.getByText("200")).toBeInTheDocument();
-  expect(fetcher.mock.calls.every((args) => args.length === 2 && args[0] === "/api/simulation/snapshot")).toBe(true);
+  expect(fetcher.mock.calls.every((args) => args.length === 2 && ["/api/simulation/snapshot", "/api/simulation/training"].includes(args[0]))).toBe(true);
+  expect(fetcher.mock.calls.filter((args) => args[0] === "/api/simulation/snapshot").length).toBeGreaterThan(1);
   fireEvent.click(screen.getByRole("button", { name: "Play replay" }));
   await act(async () => { await vi.advanceTimersByTimeAsync(250); });
   expect((screen.getByLabelText("Displayed move") as HTMLInputElement).value).toBe("1");

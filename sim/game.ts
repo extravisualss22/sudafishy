@@ -16,20 +16,23 @@ export function termination(board: Chess): { result: GameRecord["result"]; termi
 export async function playGame(options: RunOptions, index = 0, onProgress?: (progress: Progress) => void) {
   const start = performance.now();
   const seed = (options.seed + Math.imul(index, 2654435761)) >>> 0;
-  const white = await createOpponent(options.white, seed);
-  const black = await createOpponent(options.black, seed ^ 0xabcdef);
+  const white = await createOpponent(options.white, seed, options.stockfish);
+  let black: Awaited<ReturnType<typeof createOpponent>> | undefined;
+  try {
+  black = await createOpponent(options.black, seed ^ 0xabcdef, options.stockfish);
+  const blackPlayer = black;
   const board = new Chess(options.initialFen);
   const initialFen = board.fen();
   const gameId = randomUUID();
   const moves: string[] = [], san: string[] = [];
   let nodes = 0;
-  const observed = (): ObservedGame => ({ gameId, white: white.identity, black: black.identity, initialFen,
+  const observed = (): ObservedGame => ({ gameId, white: white.identity, black: blackPlayer.identity, initialFen,
     moves: [...moves], san: [...san], finished: false });
   const report = () => onProgress?.({ moves: moves.length, nodes, ...(options.observe ? { observed: observed() } : {}) });
   report();
   while (!termination(board) && moves.length < options.maxMoves * 2) {
     const player = board.turn() === "w" ? white.opponent : black.opponent;
-    const decision = player.chooseMove(board, options.search);
+    const decision = await player.chooseMove(board, options.search);
     if (!decision.move) throw new Error(`${player.name} returned no move in a nonterminal position`);
     const move = board.move({ from: decision.move.slice(0, 2), to: decision.move.slice(2, 4), promotion: decision.move[4] });
     moves.push(decision.move); san.push(move.san); nodes += decision.nodes;
@@ -47,4 +50,5 @@ export async function playGame(options: RunOptions, index = 0, onProgress?: (pro
     "BlackGeneration", black.identity.generation ?? "none");
   onProgress?.({ moves: moves.length, nodes, ...(options.observe ? { observed: { ...observed(), finished: true, ...outcome } } : {}) });
   return { record, pgn: board.pgn() + "\n\n" };
+  } finally { white.opponent.dispose?.(); black?.opponent.dispose?.(); }
 }
