@@ -1,12 +1,12 @@
 # sudalol
 
-An independent beginner chess engine and headless simulation foundation for a school project. **Phase 1 only:** no neural network, training, teacher analysis, or automatic generation promotion. No Elo claim is made.
+An independent chess engine and local learning laboratory for a school project. Phase 2 adds offline Stockfish coaching, streaming datasets, PyTorch policy/value training, immutable neural generations, and evidence-based champion gating. **gen0 remains unchanged. Human chess Elo is unrated.**
 
 The existing React chess analyzer remains at `/`. It explicitly identifies its separate Stockfish analysis engine. **Stockfish never selects sudalol gen0's simulation moves.** The new observation dashboard is at `/spectator`.
 
 ## Quick start
 
-Use **Node.js 22.18+ or 24+** and pnpm. Native Node TypeScript support runs the simulation; no Python or GPU setup is needed.
+Use **Node.js 22.18+ or 24+** and pnpm. Native Node TypeScript support runs the simulation. The original simulator needs no Python or GPU; the Phase 2 learning commands below use Python 3.11 and PyTorch.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -50,9 +50,69 @@ Options: `--search-depth 1..8`, `--max-nodes 100..1000000`, `--max-moves 1..1000
 pnpm typecheck
 pnpm test
 pnpm build
+work\venv\Scripts\python.exe -m unittest learning.test_learning -v
 ```
 
 Tests cover the original website plus chess rules, legal/tactical decisions, search limits, generation protection, complete games, parallel saves, spectator independence, and observation API/UI behavior. See [actual validation results](docs/validation.md).
+
+## Phase 2 Windows setup
+
+Run in the repository root in PowerShell. This creates an isolated environment and does not change OS execution policies or hardware protections. The CUDA wheel below was validated on the detected RTX 2070 SUPER; choose the CPU command instead on a machine without compatible CUDA. See the [official PyTorch installer](https://pytorch.org/get-started/locally/) for other platforms.
+
+```powershell
+pnpm install --frozen-lockfile
+py -3.11 -m venv work/venv
+$py = "$PWD/work/venv/Scripts/python.exe"
+& $py -m pip install --upgrade pip
+& $py -m pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cu128
+# CPU alternative to the preceding command:
+# & $py -m pip install torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
+& $py -m pip install -r learning/requirements.txt
+& $py -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+
+## Ten learning commands
+
+These commands use new run names for your own experiment. If restoring the supplied evidence bundle, keep its original `gen1` and use the loop to allocate the next generation. Never delete or overwrite an existing generation to reuse its number. All steps are finite. The default data directory is `training-data`; set `$env:SUDALOL_DATA` to an absolute path **inside this repository** to isolate another experiment (Node's archived engines resolve `chess.js` from the repository).
+
+```powershell
+# 1. Establish gen0 before training; 32 color-balanced games.
+& $py -m learning.cli benchmark gen0 --games 32 --name my-gen0-baseline
+
+# 2. Generate training games. NORMAL explicitly has no older-gen allocation for gen0.
+& $py -m learning.cli simulate --generation gen0 --config learning/configs/normal.json --name my-training-1
+
+# 3. Offline teacher; repeat the same command for the next batch until "added": 0.
+& $py -m learning.cli review --games training-data/simulations/my-training-1 --output training-data/reviews/my-review-1.sqlite --max-positions 256
+
+# 4. Freeze a dataset version (optionally also pass --games PATH for outcome labels).
+& $py -m learning.cli dataset --teacher training-data/reviews/my-review-1.sqlite --output training-data/datasets/my-dataset-1.sqlite
+
+# 5. Train and archive gen1 on a fresh checkout/data root.
+& $py -m learning.cli train --dataset training-data/datasets/my-dataset-1.sqlite --run training-data/training/my-gen1
+& $py -m learning.cli archive --run training-data/training/my-gen1 --generation gen1 --parent gen0
+
+# 6. Fixed-reference benchmark: same weak opponent/settings as gen0.
+& $py -m learning.cli benchmark gen1 --games 32 --name my-gen1-reference
+
+# 7. Independent champion match; only this explicit gate can promote.
+& $py -m learning.cli compare gen1 --opponent gen0 --games 32 --name my-gen1-gate --gate --min-games 32 --min-score 0.55 --min-lower 0.50
+
+# 8. Open http://127.0.0.1:5173/spectator (separate terminal).
+pnpm dashboard
+
+# 9. Continue for exactly one iteration, allocating the next unused generation.
+& $py -m learning.cli loop --config learning/configs/normal.json --iterations 1 --run-id experiment
+
+# 10. Request a safe stop from another terminal, then clear it and resume.
+& $py -m learning.cli stop
+& $py -m learning.cli resume
+& $py -m learning.cli loop --config learning/configs/normal.json --iterations 1 --run-id experiment
+```
+
+`--iterations` is an **absolute target for that run ID**, so repeating `1` resumes without accidentally scheduling an additional iteration. Use `2` deliberately to extend it. Resume an individual review/train/simulation by repeating its original command. `train --max-batches 1` exercises checkpoint recovery. `--settings FILE.json` accepts teacher, training, or match settings; see [architecture, settings, metrics and recovery](docs/phase2.md). `learning/configs/overnight.json` is available but never started automatically, and fails if its older-generation category is unavailable.
+
+Actual validation: gen0 versus weak **31 W / 0 D / 1 L**; gen1 versus gen0 **14 W / 8 D / 10 L**, rejected as champion; gen1 versus weak **31 W / 1 D / 0 L**. These are small shallow-search experiments, not a calibrated strength claim. The [Phase 2 results](docs/phase2-results.md) include exact counts and limitations.
 
 ## Existing screen-share board reader
 

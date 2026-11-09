@@ -5,6 +5,7 @@ import { parseFen, START_FEN } from "@/lib/chess/position";
 import { parseSnapshot, replayFrames } from "@/lib/sudalol/spectator";
 import type { ObservedGame, RunSnapshot } from "@/lib/sudalol/types";
 import "./spectator.css";
+import { TrainingPanel } from "./TrainingPanel";
 
 const format = (n: number | undefined, decimals = 0) => n === undefined ? "—" : n.toLocaleString(undefined, { maximumFractionDigits: decimals });
 const elapsed = (seconds: number) => `${Math.floor(seconds / 3600).toString().padStart(2, "0")}:${Math.floor(seconds / 60 % 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
@@ -67,7 +68,7 @@ export function Spectator() {
           <a href="/" className="sudalol-back"><ArrowLeft size={15} /> Position analyzer</a>
         </header>
         <section className="sudalol-heading">
-          <div><div className="sudalol-eyebrow">PHASE 01 · INDEPENDENT CHESS ENGINE</div><h1>Watch the thinking.</h1><p>Headless simulation. A front-row seat to every move.</p></div>
+          <div><div className="sudalol-eyebrow">sudalol · INDEPENDENT CHESS ENGINE</div><h1>Watch the thinking.</h1><p>Headless simulation. A front-row seat to every move.</p></div>
           <span className={`sudalol-status ${connected && snapshot?.status === "running" ? "is-live" : ""}`}><span />{offline ? "SAVED REPLAY" : !connected ? "DISCONNECTED" : snapshot?.status.toUpperCase()}</span>
         </section>
         <section className="sudalol-metrics" aria-label="Simulation statistics">
@@ -103,7 +104,7 @@ export function Spectator() {
             </section>
             <section className="sudalol-card"><div className="sudalol-card-title"><Cpu size={17} /><h2>Session telemetry</h2></div>
               <dl><dt>Elapsed simulation</dt><dd>{snapshot ? elapsed(snapshot.elapsedSeconds) : "—"}</dd><dt>Worker count</dt><dd>{format(snapshot?.workers)}</dd><dt>Moves / second</dt><dd>{format(snapshot?.movesPerSecond, 2)}</dd><dt>Nodes / second</dt><dd>{format(snapshot?.nodesPerSecond, 1)}</dd><dt>Average game</dt><dd>{format(snapshot?.averageGameLength, 1)} plies</dd></dl>
-              <div className="sudalol-independence"><span /> Custom search · no Stockfish move selection</div>
+              <div className="sudalol-independence"><span /> sudalol chooses its own moves · Stockfish opponents are labeled</div>
             </section>
             <section className="sudalol-card sudalol-import"><label className="sudalol-import-label"><Upload size={16} /> Import snapshot.json<input aria-label="Import snapshot" type="file" accept=".json,application/json" onChange={async (event) => {
                 const file = event.target.files?.[0]; if (!file) return;
@@ -116,7 +117,8 @@ export function Spectator() {
             </section>
           </aside>
         </div>
-        <footer className="sudalol-footer"><span>sudalol gen0 · handcrafted evaluation</span><span>Actual simulation data · Phase 1 does not train a network</span></footer>
+        <TrainingPanel gameId={selected?.gameId} ply={displayedPly} onReplay={(game,position)=>{setSelected(game);setPly(position);setPlaying(false);}} />
+        <footer className="sudalol-footer"><span>sudalol · gen0 preserved permanently</span><span>Actual games · offline teaching · measured promotion</span></footer>
       </div>
     </main>
   );

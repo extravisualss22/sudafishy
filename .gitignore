@@ -34,3 +34,6 @@ dist-ssr
 # Local simulation datasets and verification artifacts
 runs/
 work/
+training-data/
+__pycache__/
+*.pyc

@@ -17,8 +17,10 @@ export interface Opponent {
   id: string;
   name: string;
   generation: string | null;
-  chooseMove(board: Chess, options: SearchOptions): Decision;
+  chooseMove(board: Chess, options: SearchOptions): Decision | Promise<Decision>;
+  dispose?(): void;
 }
+export type SynchronousOpponent = Omit<Opponent, "chooseMove"> & { chooseMove(board: Chess, options: SearchOptions): Decision };
 export interface PlayerIdentity {
   id: string;
   name: string;

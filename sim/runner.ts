@@ -10,8 +10,10 @@ import type { Progress } from "./game.ts";
 export interface RunHooks { signal?: AbortSignal; onSnapshot?: (snapshot: RunSnapshot) => void }
 export async function runSimulation(options: RunOptions, hooks: RunHooks = {}) {
   validateRun(options);
-  await createOpponent(options.white, options.seed);
-  await createOpponent(options.black, options.seed);
+  (await createOpponent(options.white, options.seed, options.stockfish)).opponent.dispose?.();
+  (await createOpponent(options.black, options.seed, options.stockfish)).opponent.dispose?.();
+  for (const id of new Set(options.jobs?.flatMap((job) => [job.white, job.black]) ?? []))
+    (await createOpponent(id, options.seed, options.stockfish)).opponent.dispose?.();
   const runId = new Date().toISOString().replace(/[:.]/g, "-") + "-" + randomUUID().slice(0, 8);
   const directory = resolve(options.output, runId);
   mkdirSync(directory, { recursive: true });
@@ -64,7 +66,10 @@ export async function runSimulation(options: RunOptions, hooks: RunHooks = {}) {
       const assign = () => {
         if (next >= options.games || status !== "running") return;
         lastMoves = lastNodes = 0;
-        worker.postMessage({ index: next++, options: { ...options, observe: options.observe && slot === 0 } });
+        const job = options.jobs?.[next];
+        const index = job?.index ?? (options.startIndex ?? 0) + next;
+        next++;
+        worker.postMessage({ index, options: { ...options, ...job, jobs: undefined, observe: options.observe && slot === 0 } });
       };
       worker.on("message", (message: { type: string; progress?: Progress; record?: GameRecord; pgn?: string; error?: string }) => {
         if (status !== "running") return;

@@ -1,0 +1,4 @@
+chess==1.11.2
+numpy==2.2.6
+# Install a CPU or CUDA build from the official PyTorch index; see README.
+torch==2.9.1
